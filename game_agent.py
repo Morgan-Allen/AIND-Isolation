@@ -96,24 +96,52 @@ class CustomPlayer:
         return best_rating, move_picked
     
     
-    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
+    def alphabeta(self, game, depth, lower_bound=float("-inf"), upper_bound=float("inf"), maximize=True):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
-
-        # TODO: finish this function!
-        raise NotImplementedError
-
-
+        
+        #  TODO:  If I recall correctly, alpha-beta pruning works by taking the
+        #  upper/lower bounds for other values and excluding any values that
+        #  can't affect the outcome.
+        #  Alpha is presumably the lower bound, and Beta is presumably the
+        #  upper bound.
+        
+        move_picked = (-1, -1)
+        best_score = lower_bound if maximize else upper_bound
+        
+        for move in game.legal_moves():
+            
+            if lower_bound >= upper_bound:
+                break
+            
+            step = game.copy()
+            step.apply_move(move)
+            
+            if depth == self.search_depth:
+                move_score = custom_score(game, self)
+            elif maximize:
+                move_score, (x, y) = self.alphabeta(step, depth + 1, lower_bound, float("inf"), False)
+            else:
+                move_score, (x, y) = self.alphabeta(step, depth + 1, float("-inf"), upper_bound, True)
+            
+            if move_score > lower_bound and maximize:
+                lower_bound = move_score
+                move_picked = move
+            
+            if move_score < lower_bound and not maximize:
+                upper_bound = move_score
+                move_picked = move
+        
+        return best_score, move_picked
 
 
 if __name__ == '__main__':
     
-    
     test_board = Board(4, 4)
     print(test_board.to_string())
     
-    
-    
-    
-    
-    
+
+
+
+
+
