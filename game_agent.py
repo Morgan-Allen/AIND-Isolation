@@ -38,9 +38,23 @@ class CustomPlayer:
     def get_move(self, game, legal_moves, time_left):
         self.time_left = time_left
         
-        #  TODO:  Consider adding an opening book to evaluate moves?
-        #  TODO:  You need to add iterative deepening as well!
+        #  TODO:  Consider adding an opening book?
         
+        max_depth = self.search_depth
+        depth = 1 if self.iterative else max_depth
+        last_move = (-1, -1)
+        
+        while max_depth <= 0 or depth <= max_depth:
+            move = self.try_move(game, depth)
+            if move == False:
+                break
+            last_move = move
+            depth += 1
+        return last_move
+    
+    
+    def try_move(self, game, depth):
+        move = (-1, -1)
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
@@ -48,18 +62,15 @@ class CustomPlayer:
             # when the timer gets close to expiring
             
             if self.method == 'minimax':
-                rating, (x, y) = self.minimax(game, self.search_depth, True)
-                return (x, y)
+                rating, move = self.minimax(game, depth, True)
             
             if self.method == 'alphabeta':
-                rating, (x, y) = self.alphabeta(game, self.search_depth, True)
-                return (x, y)
+                rating, move = self.alphabeta(game, depth, True)
             
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            return (-1, -1)
-        
-        return (-1, -1)    
+            return False
+        return move
     
     
     def minimax(self, game, depth, maximize=True):
@@ -124,10 +135,8 @@ class CustomPlayer:
             
             if depth <= 1:
                 move_score = self.score(step, self)
-            elif maximize:
-                move_score, _ = self.alphabeta(step, depth - 1, lower_bound, upper_bound, False)
             else:
-                move_score, _ = self.alphabeta(step, depth - 1, lower_bound, upper_bound, True)
+                move_score, _ = self.alphabeta(step, depth - 1, lower_bound, upper_bound, not maximize)
             
             if move_score > lower_bound and maximize:
                 lower_bound = best_score = move_score
