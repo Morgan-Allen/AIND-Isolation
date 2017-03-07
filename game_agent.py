@@ -48,11 +48,11 @@ class CustomPlayer:
             # when the timer gets close to expiring
             
             if self.method == 'minimax':
-                rating, (x, y) = self.minimax(game, 1, True)
+                rating, (x, y) = self.minimax(game, self.search_depth, True)
                 return (x, y)
             
             if self.method == 'alphabeta':
-                rating, (x, y) = self.alphabeta(game, 1, True)
+                rating, (x, y) = self.alphabeta(game, self.search_depth, True)
                 return (x, y)
             
         except Timeout:
@@ -84,10 +84,10 @@ class CustomPlayer:
                 print("  Checking move: ", move)
             
             move_score = 0
-            if depth == self.search_depth:
+            if depth <= 1:
                 move_score = self.score(step, self)
             else:
-                move_score, _ = self.minimax(step, depth + 1, not maximize)
+                move_score, _ = self.minimax(step, depth - 1, not maximize)
             
             if verbose:
                 print("  Score is: ", move_score)
@@ -112,9 +112,8 @@ class CustomPlayer:
         #  Alpha is presumably the lower bound, and Beta is presumably the
         #  upper bound.
         verbose = depth == self.search_depth and self.verbose
-        
         move_picked = (-1, -1)
-        best_score = lower_bound if maximize else upper_bound
+        best_score = float("-inf") if maximize else float("inf")
         
         for move in game.get_legal_moves():
             
@@ -123,19 +122,19 @@ class CustomPlayer:
             
             step = game.forecast_move(move)
             
-            if depth == self.search_depth:
+            if depth <= 1:
                 move_score = self.score(step, self)
             elif maximize:
-                move_score, _ = self.alphabeta(step, depth + 1, lower_bound, float("inf"), False)
+                move_score, _ = self.alphabeta(step, depth - 1, lower_bound, upper_bound, False)
             else:
-                move_score, _ = self.alphabeta(step, depth + 1, float("-inf"), upper_bound, True)
+                move_score, _ = self.alphabeta(step, depth - 1, lower_bound, upper_bound, True)
             
             if move_score > lower_bound and maximize:
-                lower_bound = move_score
+                lower_bound = best_score = move_score
                 move_picked = move
             
-            if move_score < lower_bound and not maximize:
-                upper_bound = move_score
+            if move_score < upper_bound and not maximize:
+                upper_bound = best_score = move_score
                 move_picked = move
         
         if verbose:
