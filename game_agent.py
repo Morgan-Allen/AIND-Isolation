@@ -6,38 +6,80 @@ augment the test suite with your own test cases to further test your code.
 You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
-
+import math
+import random
 
 
 class Timeout(Exception):
-    #  TODO:  Subclass base exception for code clarity.
+    """ Subclass base exception for code clarity. """
     pass
 
 
-def reflect_score(game, player):
-    wide, high = game.width, game.height
-    xp, yp = game.get_player_location(player)
+def custom_score(game, player):
+    player_rating, player_explored = find_accessible(game, player, 5)
+    if player_rating == 0:
+        return float("-inf")
     
-    if xp == wide / 2 and yp == high / 2:
-        return wide * high
+    oppose_rating, oppose_explored = find_accessible(game, game.get_opponent(player), 5)
+    if oppose_rating == 0:
+        return float("inf")
     
-    opp_xy = game.get_player_location(game.get_opponent(player))
-    if opp_xy != None:
-        xo, yo = opp_xy
-        xr, yr = wide - (1 + xo), high - (1 + yo)
-        if xp == xr and yp == yr:
-            return wide * high
-    
-    return custom_score(game, player)
-
-
-def partition_score(game, player):
-    player_rating, player_explored = find_accessible(game, player)
-    oppose_rating, oppose_explored = find_accessible(game, game.get_opponent(player))
     return player_rating - oppose_rating
 
 
-def find_accessible(game, player):
+def reflect_score(game, player):
+    
+    opponent = game.get_opponent(player)
+    wide, high = game.width, game.height
+    centre = (int(wide / 2), int(high / 2))
+    own_pos = game.get_player_location(player)
+    opp_pos = game.get_player_location(opponent)
+    
+    if game.move_count <= 2:
+        if opp_pos == None:
+            centre_dist = grid_distance(own_pos, centre)
+            return 8 - centre_dist
+        else:
+            if own_pos in game.get_legal_moves(opponent):
+                return -8
+    
+    elif player == game.__player_1__:
+        xr, yr = wide - (1 + opp_pos[0]), high - (1 + opp_pos[1])
+        if own_pos == (xr, yr):
+            return 8
+    
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(opponent))
+    return own_moves - opp_moves
+
+
+def improved_with_salt_score(game, player):
+    #  This is essentially identical to the 'improved' heuristic, only we add
+    #  a small random factor to throw off deterministic evaluation.
+    if game.is_loser(player):
+        return float("-inf")
+    
+    if game.is_winner(player):
+        return float("inf")
+    
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    spice = 1
+    score = own_moves - opp_moves
+    
+    if game.active_player == player:
+        score += random.random() * spice
+    
+    return score
+
+
+def grid_distance(point_a, point_b):
+    x = point_a[0] - point_b[0]
+    y = point_a[1] - point_b[1]
+    return math.sqrt((x * x) + (y * y))
+
+
+def find_accessible(game, player, max_generation):
     explored = set()
     position = game.get_player_location(player)
     if position == None:
@@ -49,7 +91,7 @@ def find_accessible(game, player):
     access_rating = 1
     generation = 1
     
-    while len(frontier) > 0:
+    while len(frontier) > 0 and generation <= max_generation:
         new_frontier = []
         
         for point in frontier:
@@ -71,18 +113,6 @@ def find_accessible(game, player):
     return access_rating, explored
 
 
-def custom_score(game, player):
-    #  TODO:  This is the same as the 'improved' heuristic from
-    #  sample_players.py.  Come up with something new?
-    if game.is_loser(player):
-        return float("-inf")
-
-    if game.is_winner(player):
-        return float("inf")
-
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves)
 
 
 class CustomPlayer:

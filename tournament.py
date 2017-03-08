@@ -33,7 +33,7 @@ from sample_players import improved_score
 from game_agent import CustomPlayer
 from game_agent import custom_score
 from game_agent import reflect_score
-from game_agent import partition_score
+from game_agent import improved_with_salt_score
 
 
 
@@ -164,10 +164,10 @@ def main():
     # systems; i.e., the performance of the student agent is considered
     # relative to the performance of the ID_Improved agent to account for
     # faster or slower computers.
-    test_agents = [Agent(CustomPlayer(score_fn=partition_score, **CUSTOM_ARGS), "partition_score"),
-                   Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved"),
+    test_agents = [Agent(CustomPlayer(score_fn=improved_with_salt_score, **CUSTOM_ARGS), "improved_with_salt_score"),
+                   Agent(CustomPlayer(score_fn=reflect_score, **CUSTOM_ARGS), "reflect_score"),
                    Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "custom_score"),
-                   Agent(CustomPlayer(score_fn=reflect_score, **CUSTOM_ARGS), "reflect_score")]
+                   Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")]
     
     print(DESCRIPTION)
     for agentUT in test_agents:
@@ -175,10 +175,10 @@ def main():
         print("*************************")
         print("{:^25}".format("Evaluating: " + agentUT.name))
         print("*************************")
-
+        
         agents = random_agents + mm_agents + ab_agents + [agentUT]
         win_ratio = play_round(agents, NUM_MATCHES)
-
+        
         print("\n\nResults:")
         print("----------")
         print("{!s:<15}{:>10.2f}%".format(agentUT.name, win_ratio))
