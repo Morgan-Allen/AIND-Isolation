@@ -7,9 +7,6 @@ You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
 
-from sample_players import open_move_score
-from isolation import Board
-
 
 
 class Timeout(Exception):
@@ -17,9 +14,75 @@ class Timeout(Exception):
     pass
 
 
+def reflect_score(game, player):
+    wide, high = game.width, game.height
+    xp, yp = game.get_player_location(player)
+    
+    if xp == wide / 2 and yp == high / 2:
+        return wide * high
+    
+    opp_xy = game.get_player_location(game.get_opponent(player))
+    if opp_xy != None:
+        xo, yo = opp_xy
+        xr, yr = wide - (1 + xo), high - (1 + yo)
+        if xp == xr and yp == yr:
+            return wide * high
+    
+    return custom_score(game, player)
+
+
+def partition_score(game, player):
+    player_rating, player_explored = find_accessible(game, player)
+    oppose_rating, oppose_explored = find_accessible(game, game.get_opponent(player))
+    return player_rating - oppose_rating
+
+
+def find_accessible(game, player):
+    explored = set()
+    position = game.get_player_location(player)
+    if position == None:
+        return 0, explored
+    
+    directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
+                  (1, -2),  (1, 2), (2, -1),  (2, 1)]
+    frontier = [position]
+    access_rating = 1
+    generation = 1
+    
+    while len(frontier) > 0:
+        new_frontier = []
+        
+        for point in frontier:
+            for direction in directions:
+                new_x = point[0] + direction[0]
+                new_y = point[1] + direction[1]
+                new_point = (new_x, new_y)
+                if not game.move_is_legal(new_point):
+                    continue
+                if new_point in explored:
+                    continue
+                explored.add(new_point)
+                new_frontier.append(new_point)
+                access_rating += 1. / generation
+        
+        frontier = new_frontier
+        generation += 1
+    
+    return access_rating, explored
+
+
 def custom_score(game, player):
-    # TODO: Replace with custom implementation.
-    return open_move_score(game, player)
+    #  TODO:  This is the same as the 'improved' heuristic from
+    #  sample_players.py.  Come up with something new?
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves)
 
 
 class CustomPlayer:
@@ -32,7 +95,6 @@ class CustomPlayer:
         self.method = method
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
-        self.verbose = False
     
     
     def get_move(self, game, legal_moves, time_left):
@@ -62,10 +124,10 @@ class CustomPlayer:
             # when the timer gets close to expiring
             
             if self.method == 'minimax':
-                rating, move = self.minimax(game, depth, True)
+                rating, move = self.minimax(game, depth)
             
             if self.method == 'alphabeta':
-                rating, move = self.alphabeta(game, depth, True)
+                rating, move = self.alphabeta(game, depth)
             
         except Timeout:
             # Handle any actions required at timeout, if necessary
@@ -74,61 +136,23 @@ class CustomPlayer:
     
     
     def minimax(self, game, depth, maximize=True):
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise Timeout()
-        
-        #  TODO:  Get the set of all possible moves at the given time.  Create
-        #  a copy of the board for each, apply the move, and pass along to the
-        #  next iteration of minimax.
-        
-        verbose = depth == self.search_depth and self.verbose
-        best_score = float("-inf") if maximize else float("inf")
-        move_picked = (-1, -1)
-        
-        if verbose:
-            print("Getting next minimax move, maximizing: ", maximize)
-        
-        for move in game.get_legal_moves():
-            
-            step = game.forecast_move(move)
-            if verbose:
-                print("  Checking move: ", move)
-            
-            move_score = 0
-            if depth <= 1:
-                move_score = self.score(step, self)
-            else:
-                move_score, _ = self.minimax(step, depth - 1, not maximize)
-            
-            if verbose:
-                print("  Score is: ", move_score)
-            
-            if (move_score > best_score and maximize) or (move_score < best_score and not maximize):
-                best_score = move_score
-                move_picked = move
-        
-        if verbose:
-            print("  Best score:  ", best_score )
-            print("  Move picked: ", move_picked)
-        return best_score, move_picked
+        return self.alphabeta_common(game, depth, float("-inf"), float("inf"), maximize, False)
     
     
     def alphabeta(self, game, depth, lower_bound=float("-inf"), upper_bound=float("inf"), maximize=True):
+        return self.alphabeta_common(game, depth, lower_bound, upper_bound, maximize, True)
+    
+    
+    def alphabeta_common(self, game, depth, lower_bound, upper_bound, maximize, prune):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
         
-        #  TODO:  If I recall correctly, alpha-beta pruning works by taking the
-        #  upper/lower bounds for other values and excluding any values that
-        #  can't affect the outcome.
-        #  Alpha is presumably the lower bound, and Beta is presumably the
-        #  upper bound.
-        verbose = depth == self.search_depth and self.verbose
         move_picked = (-1, -1)
         best_score = float("-inf") if maximize else float("inf")
         
         for move in game.get_legal_moves():
             
-            if lower_bound >= upper_bound:
+            if prune and lower_bound >= upper_bound:
                 break
             
             step = game.forecast_move(move)
@@ -136,7 +160,7 @@ class CustomPlayer:
             if depth <= 1:
                 move_score = self.score(step, self)
             else:
-                move_score, _ = self.alphabeta(step, depth - 1, lower_bound, upper_bound, not maximize)
+                move_score, _ = self.alphabeta_common(step, depth - 1, lower_bound, upper_bound, not maximize, prune)
             
             if move_score > lower_bound and maximize:
                 lower_bound = best_score = move_score
@@ -146,22 +170,7 @@ class CustomPlayer:
                 upper_bound = best_score = move_score
                 move_picked = move
         
-        if verbose:
-            print("Getting next alphabeta move: ", move_picked)
         return best_score, move_picked
-
-
-if __name__ == '__main__':
-    
-    player_1 = CustomPlayer(2)
-    player_2 = CustomPlayer(2)
-    test_board = Board(player_1, player_2, 4, 4)
-    
-    player_1.verbose = True
-    test_board.play(1000)
-    
-    print(test_board.to_string())
-    
 
 
 
