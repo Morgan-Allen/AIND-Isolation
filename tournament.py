@@ -31,7 +31,8 @@ from sample_players import null_score
 from sample_players import open_move_score
 from sample_players import improved_score
 from game_agent import CustomPlayer
-from game_agent import accessibility_score
+from game_agent import custom_score
+from game_agent import custom_cached_score
 from game_agent import reflect_score
 from game_agent import improved_with_salt_score
 
@@ -158,16 +159,19 @@ def main():
     ab_agents = [Agent(CustomPlayer(score_fn=h, **AB_ARGS),
                        "AB_" + name) for name, h in HEURISTICS]
     random_agents = [Agent(RandomPlayer(), "Random")]
-
+    
     # ID_Improved agent is used for comparison to the performance of the
     # submitted agent for calibration on the performance across different
     # systems; i.e., the performance of the student agent is considered
     # relative to the performance of the ID_Improved agent to account for
     # faster or slower computers.
-    test_agents = [Agent(CustomPlayer(score_fn=improved_with_salt_score, **CUSTOM_ARGS), "improved_with_salt_score"),
-                   Agent(CustomPlayer(score_fn=reflect_score, **CUSTOM_ARGS), "reflect_score"),
-                   Agent(CustomPlayer(score_fn=accessibility_score, **CUSTOM_ARGS), "accessibility_score"),
-                   Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")]
+    test_agents = [
+                   Agent(CustomPlayer(score_fn=custom_cached_score, **CUSTOM_ARGS), "custom_cached_score"),
+                   #Agent(CustomPlayer(score_fn=improved_with_salt_score, **CUSTOM_ARGS), "improved_with_salt_score"),
+                   #Agent(CustomPlayer(score_fn=reflect_score, **CUSTOM_ARGS), "reflect_score"),
+                   Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "custom_score"),
+                   Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")
+                  ]
     
     print(DESCRIPTION)
     for agentUT in test_agents:
