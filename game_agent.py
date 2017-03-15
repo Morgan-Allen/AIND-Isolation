@@ -38,7 +38,13 @@ def custom_score(game, player):
     if oppose_rating == 0:
         return MAX_VAL
     
-    return player_rating - oppose_rating
+    spice = 1
+    score = player_rating - oppose_rating
+    
+    if game.active_player == player:
+        score += random.random() * spice
+    
+    return score
 
 
 def find_accessible(game, player, max_generation):
@@ -113,22 +119,23 @@ def reflect_score(game, player):
     centre = (int(wide / 2), int(high / 2))
     own_pos = game.get_player_location(player)
     opp_pos = game.get_player_location(opponent)
+    max_score = wide * high
     
     if game.move_count <= 2:
         if opp_pos == None:
-            return 8 if own_pos == centre else 0
+            return max_score if own_pos == centre else 0
         elif own_pos in game.get_legal_moves(opponent) and opp_pos == centre:
-            return -8
+            return -max_score
     
     elif player == game.__player_1__:
         xr, yr = wide - (1 + opp_pos[0]), high - (1 + opp_pos[1])
         if own_pos == (xr, yr):
-            return 8
+            return max_score
     
     return custom_score(game, player)
 
 
-def improved_with_salt_score(game, player):
+def improved_salt_score(game, player):
     """
     Returns a game-state heuristic identical to the default 'improved'
     heuristic, based on maximising your own freedom of movement and denying
@@ -171,6 +178,7 @@ def improved_with_salt_score(game, player):
 """
 Assorted directional constants used during rotations (see below.)
 """
+CACHE_VERBOSE = False
 NORTH  = 0
 EAST   = 1
 SOUTH  = 2
@@ -203,17 +211,20 @@ def custom_cached_score(game, player):
     float
         The computed score for the current game state.
     """
-    keys = []
-    if game.move_count < player.MAX_CACHE_DEPTH:
-        keys = [hash_key(game, rotation) for rotation in RECT_ROTATIONS]
+    keys = [hash_key(game, rotation) for rotation in RECT_ROTATIONS]
     
     for key in keys:
         if key in player.score_cache:
+            player.cache_hits += 1
             return player.score_cache[key]
     
     score = custom_score(game, player)
+    player.cache_misses += 1
     
-    if len(player.score_cache) < player.MAX_CACHE_SIZE and len(keys) > 0:
+    if CACHE_VERBOSE and player.cache_misses % 1000 == 0:
+        print("Cached keys for board were: ", keys)
+    
+    if len(player.score_cache) < player.MAX_CACHE_SIZE and game.move_count < player.MAX_CACHE_DEPTH:
         for key in keys:
             player.score_cache[key] = score
     
@@ -365,6 +376,8 @@ class CustomPlayer:
     score_cache = {}
     MAX_CACHE_DEPTH = 4
     MAX_CACHE_SIZE = 40000
+    cache_hits = 0
+    cache_misses = 0
     
     def __init__(self, search_depth=3, score_fn=custom_score,
                  iterative=True, method='alphabeta', timeout=10.):
@@ -445,6 +458,10 @@ class CustomPlayer:
                 break
             best_move = move
             depth += 1
+        
+        if CACHE_VERBOSE and self.cache_misses > 0:
+            print("CACHE HITS/MISSES: ", self.cache_hits, "/", self.cache_misses)
+        
         return best_move
     
     
