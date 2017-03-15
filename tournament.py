@@ -35,6 +35,7 @@ from game_agent import custom_score
 from game_agent import custom_cached_score
 from game_agent import reflect_score
 from game_agent import improved_with_salt_score
+from game_agent import centred_score
 
 
 
@@ -166,9 +167,10 @@ def main():
     # relative to the performance of the ID_Improved agent to account for
     # faster or slower computers.
     test_agents = [
-                   Agent(CustomPlayer(score_fn=custom_cached_score, **CUSTOM_ARGS), "custom_cached_score"),
+                   #Agent(CustomPlayer(score_fn=custom_cached_score, **CUSTOM_ARGS), "custom_cached_score"),
                    #Agent(CustomPlayer(score_fn=improved_with_salt_score, **CUSTOM_ARGS), "improved_with_salt_score"),
                    #Agent(CustomPlayer(score_fn=reflect_score, **CUSTOM_ARGS), "reflect_score"),
+                   Agent(CustomPlayer(score_fn=centred_score, **CUSTOM_ARGS), "centred_score"),
                    Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "custom_score"),
                    Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")
                   ]

@@ -1,6 +1,8 @@
 
 
 import random
+import math
+
 
 MAX_VAL = float("inf")
 MIN_VAL = float("-inf")
@@ -87,8 +89,8 @@ def reflect_score(game, player):
     claim the centre square during their opening moves- and failing that, stay
     out of positions which their opponent can mirror.  After that, player 1
     will attempt to mirror their opponent whenever possible.  If that's not
-    possible, we fall back on the default 'improved' heuristic based on
-    maximising your own freedom of movement and denying that of your opponent.
+    possible, we fall back on the custom_score heuristic based on maximising
+    your own freedom of movement and denying that of your opponent.
     
     Parameters
     ----------
@@ -123,9 +125,7 @@ def reflect_score(game, player):
         if own_pos == (xr, yr):
             return 8
     
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(opponent))
-    return own_moves - opp_moves
+    return custom_score(game, player)
 
 
 def improved_with_salt_score(game, player):
@@ -301,6 +301,55 @@ def rotate_coord(game, x, y, rotation):
     if (rotation == DIAG_2):
         x, y = off_v - y, off_h - x
     return x, y
+
+
+
+def centred_score(game, player):
+    """
+    Returns a game-state heuristic based on the number of legal moves
+    available to each player, but adjusted for distance from the centre of the
+    board.  In addition, the final score is divided by sum of scores for both
+    players.
+    
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The computed score for the current game state.
+    """
+    opponent = game.get_opponent(player)
+    own_moves = len(game.get_legal_moves(player))
+    if own_moves == 0:
+        return MIN_VAL
+    
+    opp_moves = len(game.get_legal_moves(opponent))
+    if opp_moves == 0:
+        return MAX_VAL
+    
+    own_moves *= centre_factor(game, player)
+    opp_moves *= centre_factor(game, opponent)
+    return own_moves / (own_moves + opp_moves)
+
+
+def centre_factor(game, player):
+    """
+    Returns a factor based off the euclidean distance to the centre of the
+    board, relative to maximum dimensions.
+    """
+    x, y = game.get_player_location(player)
+    dx, dy = x - game.width / 2., y - game.height / 2.
+    dist = math.sqrt((dx * dx) + (dy * dy))
+    maxWide = max(game.width, game.height)
+    return maxWide / (maxWide + dist)
 
 
 
