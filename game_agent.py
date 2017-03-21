@@ -379,6 +379,11 @@ class CustomPlayer:
     cache_hits = 0
     cache_misses = 0
     
+    min_depth_reached = -1
+    search_depth_total = 0
+    num_searches = 0
+    
+    
     def __init__(self, search_depth=3, score_fn=custom_score,
                  iterative=True, method='alphabeta', timeout=10.):
         """
@@ -409,12 +414,18 @@ class CustomPlayer:
             a positive value large enough to allow the function to return
             before the timer expires.
         """
-        self.search_depth = search_depth
         self.iterative = iterative
+        self.search_depth = -1 if iterative else search_depth
         self.score = score_fn
         self.method = method
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
+    
+    
+    def get_average_search_depth(self):
+        if self.num_searches <= 0:
+            return 0
+        return float(self.search_depth_total) / self.num_searches
     
     
     def get_move(self, game, legal_moves, time_left):
@@ -447,13 +458,20 @@ class CustomPlayer:
         """
         
         self.time_left = time_left
-        
         max_depth = self.search_depth
         depth = 1 if self.iterative else max_depth
         best_move = (-1, -1)
+        max_depth_reached = 0
         
         while max_depth <= 0 or depth <= max_depth:
+            
+            self.min_depth_reached = depth
+            
             move = self.try_move(game, depth)
+            
+            search_depth = depth - self.min_depth_reached
+            max_depth_reached = max(search_depth, max_depth_reached)
+            
             if move == False:
                 break
             best_move = move
@@ -461,6 +479,9 @@ class CustomPlayer:
         
         if CACHE_VERBOSE and self.cache_misses > 0:
             print("CACHE HITS/MISSES: ", self.cache_hits, "/", self.cache_misses)
+        
+        self.search_depth_total += max_depth_reached
+        self.num_searches += 1
         
         return best_move
     
@@ -553,8 +574,10 @@ class CustomPlayer:
             step = game.forecast_move(move)
             
             if depth <= 1:
+                self.min_depth_reached = min(self.min_depth_reached, depth)
                 move_score = self.score(step, self)
             else:
+                self.min_depth_reached = min(self.min_depth_reached, depth)
                 move_score, _ = self.alphabeta_common(step, depth - 1, lower_bound, upper_bound, not maximize, prune)
             
             if move_score > lower_bound and maximize:

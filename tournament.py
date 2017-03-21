@@ -188,6 +188,7 @@ def main():
         print("\n\nResults:")
         print("----------")
         print("{!s:<15}{:>10.2f}%".format(agentUT.name, win_ratio))
+        print("AVERAGE SEARCH DEPTH: ", agentUT.player.get_average_search_depth())
 
 
 if __name__ == "__main__":
