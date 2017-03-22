@@ -1,7 +1,6 @@
 
 
 import random
-import math
 
 
 MAX_VAL = float("inf")
@@ -211,9 +210,9 @@ def custom_cached_score(game, player):
     float
         The computed score for the current game state.
     """
-    keys = [hash_key(game, rotation) for rotation in RECT_ROTATIONS]
-    
-    for key in keys:
+    depth_okay = game.move_count < player.MAX_CACHE_DEPTH
+    if depth_okay:
+        key = hash_key(game, NORTH)
         if key in player.score_cache:
             player.cache_hits += 1
             return player.score_cache[key]
@@ -221,12 +220,12 @@ def custom_cached_score(game, player):
     score = custom_score(game, player)
     player.cache_misses += 1
     
-    if CACHE_VERBOSE and player.cache_misses % 1000 == 0:
-        print("Cached keys for board were: ", keys)
-    
-    if len(player.score_cache) < player.MAX_CACHE_SIZE and game.move_count < player.MAX_CACHE_DEPTH:
-        for key in keys:
-            player.score_cache[key] = score
+    if depth_okay and len(player.score_cache) < player.MAX_CACHE_SIZE:
+        keys = [hash_key(game, rotation) for rotation in RECT_ROTATIONS]
+        if CACHE_VERBOSE and player.cache_misses % 1000 == 0:
+            print("Cached keys for board were: ", keys)
+        for rotated_key in keys:
+            player.score_cache[rotated_key] = score
     
     return score
 
@@ -315,12 +314,10 @@ def rotate_coord(game, x, y, rotation):
 
 
 
-def centred_score(game, player):
+def fast_improved_score(game, player):
     """
-    Returns a game-state heuristic based on the number of legal moves
-    available to each player, but adjusted for distance from the centre of the
-    board.  In addition, the final score is divided by sum of scores for both
-    players.
+    Returns a game-state heuristic identical to the improved heuristic, but
+    without the wasteful is_loser and is_winner calls.
     
     Parameters
     ----------
@@ -346,21 +343,7 @@ def centred_score(game, player):
     if opp_moves == 0:
         return MAX_VAL
     
-    own_moves *= centre_factor(game, player)
-    opp_moves *= centre_factor(game, opponent)
-    return own_moves / (own_moves + opp_moves)
-
-
-def centre_factor(game, player):
-    """
-    Returns a factor based off the euclidean distance to the centre of the
-    board, relative to maximum dimensions.
-    """
-    x, y = game.get_player_location(player)
-    dx, dy = x - game.width / 2., y - game.height / 2.
-    dist = math.sqrt((dx * dx) + (dy * dy))
-    maxWide = max(game.width, game.height)
-    return maxWide / (maxWide + dist)
+    return own_moves - opp_moves
 
 
 

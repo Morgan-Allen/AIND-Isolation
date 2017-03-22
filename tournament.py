@@ -35,7 +35,7 @@ from game_agent import custom_score
 from game_agent import custom_cached_score
 from game_agent import reflect_score
 from game_agent import improved_salt_score
-from game_agent import centred_score
+from game_agent import fast_improved_score
 
 
 
@@ -170,7 +170,7 @@ def main():
                    Agent(CustomPlayer(score_fn=custom_cached_score, **CUSTOM_ARGS), "custom_cached_score"),
                    Agent(CustomPlayer(score_fn=improved_salt_score, **CUSTOM_ARGS), "improved_salt_score"),
                    Agent(CustomPlayer(score_fn=reflect_score, **CUSTOM_ARGS), "reflect_score"),
-                   Agent(CustomPlayer(score_fn=centred_score, **CUSTOM_ARGS), "centred_score"),
+                   Agent(CustomPlayer(score_fn=fast_improved_score, **CUSTOM_ARGS), "fast_improved_score"),
                    Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "custom_score"),
                    Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved"),
                   ]
